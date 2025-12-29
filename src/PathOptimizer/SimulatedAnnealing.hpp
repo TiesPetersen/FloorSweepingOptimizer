@@ -2,26 +2,33 @@
 
 #include "Graph.hpp"
 #include <stdint.h>
+#include <vector>
 
 class SimulatedAnnealing {
 private:
   const Graph &graph;
+
   vector<int> currentPath;
-  int currentCost;
+  double currentCost;
   vector<int> bestPath;
-  int bestCost;
+  double bestCost;
+
   int pathSize;
+
   double initialTemperature;
   double finalTemperature;
   long long iterations;
 
+  double angleWeight;
+
   double acceptanceProbability(double distanceDifference, double temperature);
 
-  int calculateCost(const vector<int> &path);
+  double calculateCost(const vector<int> &path);
 
 public:
   SimulatedAnnealing(const Graph &graph, double initialTemperature,
-                     double finalTemperature, long long iterations);
+                     double finalTemperature, long long iterations,
+                     double angleWeight);
 
   void optimize();
 

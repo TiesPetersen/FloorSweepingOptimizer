@@ -5,6 +5,11 @@
 
 using namespace std;
 
+struct Point {
+  int x;
+  int y;
+};
+
 class Graph {
 private:
   void readAdjMatrixFromFile(const string filePath);
@@ -17,7 +22,13 @@ public:
   vector<vector<int>> distanceTable;
   vector<vector<int>> predecessorTable;
 
+  // Coordinates of the nodes (index matches node ID)
+  vector<Point> nodeCoordinates;
+
   Graph(string filePath);
+
+  // Function to load node coordinates from map.txt
+  void loadMap(const string filePath);
 
   void addEdge(int from, int to, int weight);
 

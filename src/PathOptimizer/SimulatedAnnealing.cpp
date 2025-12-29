@@ -1,42 +1,87 @@
 #include "SimulatedAnnealing.hpp"
 
 #include <algorithm>
-#include <cmath> // For exp
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <random>
 
 using namespace std;
 
-double SimulatedAnnealing::acceptanceProbability(double distanceDifference,
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+double SimulatedAnnealing::acceptanceProbability(double costDifference,
                                                  double temperature) {
-  // If the new distance is better (difference < 0), always accept (return 1.0).
-  if (distanceDifference < 0) {
+  // If the new cost is better (difference < 0), always accept (return 1.0).
+  if (costDifference < 0) {
     return 1.0;
   }
   // Otherwise, accept with probability exp(-delta / temperature).
-  return exp(-distanceDifference / temperature);
+  return exp(-costDifference / temperature);
 }
 
-int SimulatedAnnealing::calculateCost(const vector<int> &path) {
-  int totalDistance = 0;
-  for (size_t i = 0; i < path.size() - 1; ++i) {
-    int from = path[i];
-    int to = path[i + 1];
-    totalDistance += graph.distanceTable[from][to];
-  }
-  // Close the loop
-  totalDistance += graph.distanceTable[path.back()][path[0]];
+double SimulatedAnnealing::calculateCost(const vector<int> &path) {
+  double totalCost = 0.0;
+  double totalDistance = 0.0;
+  double totalAngleCost = 0.0;
 
-  return totalDistance;
+  size_t size = path.size();
+  if (size < 2)
+    return 0.0;
+
+  for (size_t i = 0; i < size; ++i) {
+    int u = path[i];
+    int v = path[(i + 1) % size];
+
+    // 1. Distance Cost
+    totalDistance += graph.distanceTable[u][v];
+
+    // 2. Angle Cost (Calculate deviation at node v)
+    // We look at the sequence: u -> v -> w
+    if (graph.nodeCoordinates.size() == graph.n && angleWeight > 0.0) {
+      int w = path[(i + 2) % size];
+
+      Point p1 = graph.nodeCoordinates[u];
+      Point p2 = graph.nodeCoordinates[v];
+      Point p3 = graph.nodeCoordinates[w];
+
+      // Vector v1 (u -> v)
+      double dx1 = p2.x - p1.x;
+      double dy1 = p2.y - p1.y;
+
+      // Vector v2 (v -> w)
+      double dx2 = p3.x - p2.x;
+      double dy2 = p3.y - p2.y;
+
+      // Calculate angles
+      double angle1 = atan2(dy1, dx1);
+      double angle2 = atan2(dy2, dx2);
+
+      // Calculate deviation (absolute difference)
+      double diff = abs(angle1 - angle2);
+
+      // Normalize to [0, PI]
+      if (diff > M_PI) {
+        diff = 2 * M_PI - diff;
+      }
+
+      totalAngleCost += diff;
+    }
+  }
+
+  totalCost = totalDistance + (totalAngleCost * angleWeight);
+  return totalCost;
 }
 
 SimulatedAnnealing::SimulatedAnnealing(const Graph &graph,
                                        double initialTemperature,
                                        double finalTemperature,
-                                       long long iterations)
+                                       long long iterations, double angleWeight)
     : graph(graph), initialTemperature(initialTemperature),
-      finalTemperature(finalTemperature), iterations(iterations) {
+      finalTemperature(finalTemperature), iterations(iterations),
+      angleWeight(angleWeight) {
   pathSize = graph.n;
   currentPath = calculateRandomPath();
   currentCost = calculateCost(currentPath);
@@ -53,8 +98,8 @@ void SimulatedAnnealing::optimize() {
   for (long long iter = 0; iter < iterations; ++iter) {
     // Logging progress every 5% of iterations
     if (iter % (iterations / 20) == 0) {
-      printf("Iteration %lld/%lld (%.0f%%), Temp: %.2f, Curr: %d, Best: "
-             "%d\n",
+      printf("Iteration %lld/%lld (%.0f%%), Temp: %.2f, Curr: %.2f, Best: "
+             "%.2f\n",
              iter, iterations, (100.0 * iter) / iterations, temperature,
              currentCost, bestCost);
     }
@@ -76,21 +121,17 @@ void SimulatedAnnealing::optimize() {
     // Perform the 2-opt swap by reversing the segment between i and j
     reverse(currentPath.begin() + i, currentPath.begin() + j + 1);
 
-    // Calculate the new distance after the swap
-    int newCost = calculateCost(currentPath);
+    // Calculate the new cost after the swap
+    double newCost = calculateCost(currentPath);
 
-    // Calculate the distance difference
-    int costDifference = newCost - currentCost;
+    // Calculate the difference
+    double costDifference = newCost - currentCost;
 
     // Decide whether to accept the new path
     if (acceptanceProbability(costDifference, temperature) >
         ((double)rand() / RAND_MAX)) {
 
-      // Accept the new path (Reverse the segment)
-      // The segment was already reversed above, so no need to reverse again
-      // here.
-
-      // Update cost
+      // Accept the new path
       currentCost = newCost;
 
       // Update best path
@@ -108,13 +149,17 @@ void SimulatedAnnealing::optimize() {
 }
 
 vector<int> SimulatedAnnealing::calculateRandomPath() {
+  // Initialize a sequential path
   vector<int> randomPath;
   for (int i = 0; i < pathSize; ++i) {
     randomPath.push_back(i);
   }
+
+  // Shuffle the path
   random_device rd;
   mt19937 g(rd());
   shuffle(randomPath.begin(), randomPath.end(), g);
+
   return randomPath;
 }
 
@@ -126,13 +171,14 @@ void SimulatedAnnealing::saveOptimizedPath(const string filePath,
     string newFilePath;
     if (dotPos != string::npos) {
       newFilePath = filePath.substr(0, dotPos) + "_cost_" +
-                    to_string(bestCost) + filePath.substr(dotPos);
+                    to_string((int)bestCost) + filePath.substr(dotPos);
     } else {
-      newFilePath = filePath + "_cost_" + to_string(bestCost);
+      newFilePath = filePath + "_cost_" + to_string((int)bestCost);
     }
     return saveOptimizedPath(newFilePath, false);
   }
 
+  // Save the best path to the specified file, expanding via predecessor table
   ofstream outFile(filePath);
 
   if (!outFile.is_open()) {
@@ -141,11 +187,7 @@ void SimulatedAnnealing::saveOptimizedPath(const string filePath,
     throw runtime_error("Error writing to file: " + filePath);
   }
 
-  if (bestPath.empty()) {
-    outFile.close();
-    return;
-  }
-
+  // Expand the path using the predecessor table
   for (size_t i = 0; i < bestPath.size(); ++i) {
     int u = bestPath[i];
     int v = bestPath[(i + 1) % bestPath.size()];

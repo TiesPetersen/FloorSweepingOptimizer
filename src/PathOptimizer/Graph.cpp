@@ -22,7 +22,10 @@ void Graph::readAdjMatrixFromFile(const string filePath) {
 
   while (getline(file, line)) {
     if (line.empty()) {
-      // Empty line indicates new node
+      // Empty line indicates new node (or end of previous node's list)
+      // Note: The logic here assumes the file ends with an empty line or the
+      // loop handles the push correctly. Based on MapGenerator, it prints
+      // neighbors then an empty line.
       adjMatrix.push_back(current_neighbors);
       current_neighbors.clear();
     } else {
@@ -35,6 +38,11 @@ void Graph::readAdjMatrixFromFile(const string filePath) {
         current_neighbors.push_back({neighbor_id, weight});
       }
     }
+  }
+
+  // Handle case where file might not end with empty line but data exists
+  if (!current_neighbors.empty()) {
+    adjMatrix.push_back(current_neighbors);
   }
 
   n = adjMatrix.size();
@@ -94,6 +102,51 @@ Graph::Graph(string filePath) {
 
   // Build the distance table for during path optimization
   buildDistanceTable();
+}
+
+void Graph::loadMap(const string filePath) {
+  ifstream file(filePath);
+  if (!file.is_open()) {
+    cerr << "Error opening map file: " << filePath << endl;
+    return;
+  }
+
+  string line;
+  bool readingTiles = false;
+  nodeCoordinates.clear();
+
+  // The map file structure:
+  // 1. Obstacles (x y)
+  // 2. Empty Line
+  // 3. Tiles (x y)
+  // We only care about tiles, and their order must match the adjacency list
+  // IDs.
+
+  while (getline(file, line)) {
+    // Trim whitespace from line for robust checking
+    size_t first = line.find_first_not_of(" \t\r\n");
+    size_t last = line.find_last_not_of(" \t\r\n");
+    if (first == string::npos) {
+      // Empty line found
+      readingTiles = true;
+      continue;
+    }
+
+    if (readingTiles) {
+      stringstream ss(line);
+      int x, y;
+      if (ss >> x >> y) {
+        nodeCoordinates.push_back({x, y});
+      }
+    }
+  }
+
+  if (nodeCoordinates.size() != n) {
+    cerr << "Warning: Number of tiles in map.txt (" << nodeCoordinates.size()
+         << ") does not match number of nodes in graph (" << n << ")." << endl;
+  } else {
+    cout << "Loaded " << nodeCoordinates.size() << " node coordinates." << endl;
+  }
 }
 
 void Graph::addEdge(int from, int to, int weight) {
