@@ -17,7 +17,7 @@ ArrayList<Integer> pathIDs;
 
 // --- ANIMATION VARIABLES ---
 int pathProgress = 0;      // How many steps have we drawn so far?
-int speedDelay = 5;        // Higher = Slower. 1 = Fast, 10 = Slow.
+int speedDelay = 2;        // Higher = Slower. 1 = Fast, 10 = Slow.
 
 // Holds the highest traffic count on any single edge
 int maxOverlaps = 1;
@@ -78,7 +78,8 @@ void draw() {
     }
     
     // Calculate Alpha based on MAX density found in the whole file
-    float pathAlpha = 255.0 / (float)maxOverlaps;
+    //float pathAlpha = 255.0 / (float)maxOverlaps;
+    float pathAlpha = 255.0;
     if (pathAlpha < 20) pathAlpha = 20; // Minimum visibility
 
     stroke(255, 0, 0, pathAlpha); 

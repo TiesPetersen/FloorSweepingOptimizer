@@ -1,28 +1,41 @@
 #include "SimulatedAnnealing.hpp"
 
+#include <algorithm>
+#include <cmath> // For exp
 #include <fstream>
 #include <iostream>
 #include <random>
 
+using namespace std;
+
 double SimulatedAnnealing::acceptanceProbability(double distanceDifference,
                                                  double temperature) {
+  // If the new distance is better (difference < 0), always accept (return 1.0).
   if (distanceDifference < 0) {
     return 1.0;
   }
+  // Otherwise, accept with probability exp(-delta / temperature).
   return exp(-distanceDifference / temperature);
 }
 
-double SimulatedAnnealing::calculatePathDistance(const vector<uint16_t> &path) {
-  double totalDistance = 0.0;
+int SimulatedAnnealing::calculatePathDistance(const vector<int> &path) {
+  int totalDistance = 0;
   for (size_t i = 0; i < path.size() - 1; ++i) {
-    uint16_t from = path[i];
-    uint16_t to = path[i + 1];
+    int from = path[i];
+    int to = path[i + 1];
     totalDistance += graph.distanceTable[from][to];
   }
-
+  // Close the loop
   totalDistance += graph.distanceTable[path.back()][path[0]];
 
   return totalDistance;
+}
+
+int SimulatedAnnealing::calculateAnglePenalty(const vector<int> &path) {
+  // Placeholder for angle penalty calculation
+  // In a real implementation, this would compute penalties based on angles
+  // between nodes in the path.
+  return 0;
 }
 
 SimulatedAnnealing::SimulatedAnnealing(const Graph &graph,
@@ -40,53 +53,86 @@ SimulatedAnnealing::SimulatedAnnealing(const Graph &graph,
 
 void SimulatedAnnealing::optimize() {
   double temperature = initialTemperature;
+  // Pre-calculate cooling factor
   double coolingRate =
       pow(finalTemperature / initialTemperature, 1.0 / iterations);
 
+  // Initialize random generator setup
+  // Doing rand() % n is okay for simple use cases, but strict uniformity
+  // isn't critical for SA as long as it covers the space.
+
   for (long long iter = 0; iter < iterations; ++iter) {
-    // Log progress every 10% of iterations
-    if (iter % (iterations / 10) == 0) {
-      printf("Iteration %lld/%lld (%.0f%%), Temperature: %.2f, Current "
-             "Distance: %.2f, Best "
-             "Distance: %.2f\n",
+    // Logging progress every 5% of iterations
+    if (iter % (iterations / 20) == 0) {
+      printf("Iteration %lld/%lld (%.0f%%), Temp: %.2f, Curr: %d, Best: "
+             "%d\n",
              iter, iterations, (100.0 * iter) / iterations, temperature,
              currentDistance, bestDistance);
     }
 
-    // Pick two random nodes to swap
+    // Generate two distinct indices for swapping
     size_t i = rand() % pathSize;
     size_t j = rand() % pathSize;
-    while (j == i) {
+
+    while (i == j) {
       j = rand() % pathSize;
     }
-    swap(currentPath[i], currentPath[j]);
 
-    // Calculate the new distance
-    double newDistance = calculatePathDistance(currentPath);
-    double distanceDifference = newDistance - currentDistance;
+    if (i > j) {
+      swap(i, j);
+    }
 
+    if (i == 0 && j == pathSize - 1) {
+      // Swapping the entire path is pointless
+      continue;
+    }
+
+    // Calculate the change in distance if we swap the segment between i and j
+    size_t idx_pre_i = (i == 0) ? pathSize - 1 : i - 1;
+    size_t idx_post_j = (j == pathSize - 1) ? 0 : j + 1;
+
+    int node_a = currentPath[idx_pre_i];
+    int node_b = currentPath[i];
+    int node_c = currentPath[j];
+    int node_d = currentPath[idx_post_j];
+
+    // Current distances
+    int dist_ab = graph.distanceTable[node_a][node_b];
+    int dist_cd = graph.distanceTable[node_c][node_d];
+
+    // New distances after swap
+    int dist_ac = graph.distanceTable[node_a][node_c];
+    int dist_bd = graph.distanceTable[node_b][node_d];
+
+    // Calculate distance difference
+    int addedCost = dist_ac + dist_bd;
+    int removedCost = dist_ab + dist_cd;
+    int distanceDifference = addedCost - removedCost;
+
+    // Decide whether to accept the new path
     if (acceptanceProbability(distanceDifference, temperature) >
         ((double)rand() / RAND_MAX)) {
-      // Accept the new path
-      currentDistance = newDistance;
 
-      // Update best path found
+      // Perform the swap (Reverse the segment)
+      reverse(currentPath.begin() + i, currentPath.begin() + j + 1);
+
+      // Update distance
+      currentDistance += distanceDifference;
+
+      // Update best path
       if (currentDistance < bestDistance) {
         bestPath = currentPath;
         bestDistance = currentDistance;
       }
-    } else {
-      // Revert the swap
-      swap(currentPath[i], currentPath[j]);
     }
 
     temperature *= coolingRate;
   }
 }
 
-vector<uint16_t> SimulatedAnnealing::calculateRandomPath() {
-  vector<uint16_t> randomPath;
-  for (uint16_t i = 0; i < pathSize; ++i) {
+vector<int> SimulatedAnnealing::calculateRandomPath() {
+  vector<int> randomPath;
+  for (int i = 0; i < pathSize; ++i) {
     randomPath.push_back(i);
   }
   random_device rd;
@@ -95,7 +141,21 @@ vector<uint16_t> SimulatedAnnealing::calculateRandomPath() {
   return randomPath;
 }
 
-void SimulatedAnnealing::saveOptimizedPath(const string filePath) {
+void SimulatedAnnealing::saveOptimizedPath(const string filePath,
+                                           bool appendBestCost) {
+  // Optionally add the best cost to filename
+  if (appendBestCost) {
+    size_t dotPos = filePath.find_last_of('.');
+    string newFilePath;
+    if (dotPos != string::npos) {
+      newFilePath = filePath.substr(0, dotPos) + "_cost_" +
+                    to_string(bestDistance) + filePath.substr(dotPos);
+    } else {
+      newFilePath = filePath + "_cost_" + to_string(bestDistance);
+    }
+    return saveOptimizedPath(newFilePath, false);
+  }
+
   ofstream outFile(filePath);
 
   if (!outFile.is_open()) {
@@ -109,37 +169,27 @@ void SimulatedAnnealing::saveOptimizedPath(const string filePath) {
     return;
   }
 
-  // Iterate through the bestPath sequence to reconstruct the full journey
   for (size_t i = 0; i < bestPath.size(); ++i) {
-    uint16_t u = bestPath[i];
-    uint16_t v =
-        bestPath[(i + 1) % bestPath.size()]; // Wrap around to close the loop
+    int u = bestPath[i];
+    int v = bestPath[(i + 1) % bestPath.size()];
 
-    // If it's the very first node of the tour, write it to the file
     if (i == 0) {
       outFile << u << endl;
     }
 
-    // Reconstruct the path from u to v using the predecessor table
-    // We backtrack from v to u
-    vector<uint16_t> segment;
-    uint16_t curr = v;
+    vector<int> segment;
+    int curr = v;
 
     while (curr != u) {
       segment.push_back(curr);
       curr = graph.predecessorTable[u][curr];
 
-      // Safety check: if the graph is disconnected or logic fails
       if (curr == UINT16_MAX) {
         cerr << "Error: No path found between " << u << " and " << v << endl;
         break;
       }
     }
 
-    // The segment vector now contains [v, prev(v), ..., node_after_u]
-    // We need to write this in reverse order: node_after_u -> ... -> v
-    // Note: We do not write 'u' here because it was written in the previous
-    // iteration (or the initial check if i==0)
     for (auto it = segment.rbegin(); it != segment.rend(); ++it) {
       outFile << *it << endl;
     }

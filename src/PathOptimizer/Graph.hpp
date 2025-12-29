@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -13,14 +12,14 @@ private:
   void buildDistanceTable();
 
 public:
-  uint16_t n;
-  vector<vector<pair<uint16_t, uint8_t>>> adjMatrix;
-  vector<vector<uint32_t>> distanceTable;
-  vector<vector<uint16_t>> predecessorTable;
+  int n;
+  vector<vector<pair<int, int>>> adjMatrix;
+  vector<vector<int>> distanceTable;
+  vector<vector<int>> predecessorTable;
 
   Graph(string filePath);
 
-  void addEdge(uint16_t from, uint16_t to, uint8_t weight);
+  void addEdge(int from, int to, int weight);
 
   void printAdjMatrix();
 

@@ -6,10 +6,10 @@
 class SimulatedAnnealing {
 private:
   const Graph &graph;
-  vector<uint16_t> currentPath;
-  double currentDistance;
-  vector<uint16_t> bestPath;
-  double bestDistance;
+  vector<int> currentPath;
+  int currentDistance;
+  vector<int> bestPath;
+  int bestDistance;
   int pathSize;
   double initialTemperature;
   double finalTemperature;
@@ -17,7 +17,9 @@ private:
 
   double acceptanceProbability(double distanceDifference, double temperature);
 
-  double calculatePathDistance(const vector<uint16_t> &path);
+  int calculatePathDistance(const vector<int> &path);
+
+  int calculateAnglePenalty(const vector<int> &path);
 
 public:
   SimulatedAnnealing(const Graph &graph, double initialTemperature,
@@ -25,7 +27,7 @@ public:
 
   void optimize();
 
-  vector<uint16_t> calculateRandomPath();
+  vector<int> calculateRandomPath();
 
-  void saveOptimizedPath(const string filePath);
+  void saveOptimizedPath(const string filePath, bool appendBestCost = false);
 };

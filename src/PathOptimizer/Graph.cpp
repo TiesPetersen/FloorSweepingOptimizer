@@ -5,6 +5,8 @@
 #include <string>
 #include <utility>
 
+using namespace std;
+
 void Graph::readAdjMatrixFromFile(const string filePath) {
   // Open the file
   ifstream file(filePath);
@@ -16,7 +18,7 @@ void Graph::readAdjMatrixFromFile(const string filePath) {
 
   // Read the adjacency matrix from the file
   string line;
-  vector<std::pair<uint16_t, uint8_t>> current_neighbors;
+  vector<pair<int, int>> current_neighbors;
 
   while (getline(file, line)) {
     if (line.empty()) {
@@ -26,11 +28,10 @@ void Graph::readAdjMatrixFromFile(const string filePath) {
     } else {
       // Parse neighbor and weight
       stringstream ss(line);
-      uint16_t neighbor_id;
-      int weight_int;
+      int neighbor_id;
+      int weight;
 
-      if (ss >> neighbor_id >> weight_int) {
-        uint8_t weight = static_cast<uint8_t>(weight_int);
+      if (ss >> neighbor_id >> weight) {
         current_neighbors.push_back({neighbor_id, weight});
       }
     }
@@ -76,7 +77,7 @@ void Graph::buildDistanceTable() {
             continue;
 
           // Update the distance if a shorter path is found
-          uint32_t new_distance = distanceTable[i][k] + distanceTable[k][j];
+          int new_distance = distanceTable[i][k] + distanceTable[k][j];
           if (new_distance < distanceTable[i][j]) {
             distanceTable[i][j] = new_distance;
             predecessorTable[i][j] = predecessorTable[k][j];
@@ -95,7 +96,7 @@ Graph::Graph(string filePath) {
   buildDistanceTable();
 }
 
-void Graph::addEdge(uint16_t from, uint16_t to, uint8_t weight) {
+void Graph::addEdge(int from, int to, int weight) {
   // Ensure the adjacency matrix is large enough
   if (adjMatrix.size() <= from) {
     adjMatrix.resize(from + 1);
