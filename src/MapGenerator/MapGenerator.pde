@@ -104,11 +104,11 @@ void fileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
   } else {
-    loadGridFromFile(selection);
+    loadMapFromFile(selection);
   }
 }
 
-void loadGridFromFile(File file) {
+void loadMapFromFile(File file) {
   String[] lines = loadStrings(file.getAbsolutePath());
   
   if (lines == null) return;
@@ -120,15 +120,15 @@ void loadGridFromFile(File file) {
     }
   }
 
-  // First section in file is BORDERED
-  int currentImportState = TILE;
+  // First section in file is OBSTACLE
+  int currentImportState = OBSTACLE;
   
   for (String line : lines) {
     line = trim(line);
     
     // Empty line indicates switch from Bordered to Filled section
     if (line.length() == 0) {
-      currentImportState = OBSTACLE;
+      currentImportState = TILE;
       continue;
     }
     
@@ -147,40 +147,115 @@ void loadGridFromFile(File file) {
 }
 
 void exportCoordinates() {
-  // creates a file in the sketch directory
-  PrintWriter output = createWriter("map.txt"); 
+  String adjFilename = "adjacency_list.txt";
+  PrintWriter outputAdj = createWriter(adjFilename); 
   
-  int borderedCount = 0;
-  int filledCount = 0;
+  String mapFilename = "map.txt";
+  PrintWriter outputMap = createWriter(mapFilename);
+
+  // Array to map the absolute Grid ID to the new Sequential ID
+  int[] nodeMapping = new int[cols * rows];
+  for (int k = 0; k < nodeMapping.length; k++) nodeMapping[k] = -1;
   
-  // 1. Export Bordered Squares
+  int listIdCounter = 0;
+  
+  // File 1: Generate Adjacency List (adjacency_list.txt)
+  
+  // 1. Assign Sequential IDs
   for (int j = 0; j < rows; j++) {
     for (int i = 0; i < cols; i++) {
       if (grid[i][j] == TILE) {
-        // Format: x y
-        output.println(i + " " + j);
-        borderedCount++;
+        int gridId = j * cols + i;
+        nodeMapping[gridId] = listIdCounter;
+        listIdCounter++;
       }
     }
   }
   
-  // Add empty newline between sections
-  output.println("");
+  // 2. Export Adjacency List
+  int exportedNodes = 0;
   
-  // 2. Export Filled (Black) Squares
+  for (int j = 0; j < rows; j++) {
+    for (int i = 0; i < cols; i++) {
+      
+      if (grid[i][j] == TILE) {
+        
+        // Check all 8 Neighbors
+        for (int dy = -1; dy <= 1; dy++) {
+          for (int dx = -1; dx <= 1; dx++) {
+            
+            if (dx == 0 && dy == 0) continue;
+            
+            int nx = i + dx;
+            int ny = j + dy;
+            
+            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+              
+              if (grid[nx][ny] == TILE) {
+                
+                boolean isDiagonal = (dx != 0 && dy != 0);
+                int weight = isDiagonal ? 141 : 100;
+                boolean validConnection = true;
+                
+                // Corner Cutting Logic
+                if (isDiagonal) {
+                  if (grid[i + dx][j] == OBSTACLE) validConnection = false;
+                  if (grid[i][j + dy] == OBSTACLE) validConnection = false;
+                }
+                
+                if (validConnection) {
+                  int neighborGridId = ny * cols + nx;
+                  int neighborListId = nodeMapping[neighborGridId];
+                  outputAdj.println(neighborListId + " " + weight);
+                }
+              }
+            }
+          }
+        }
+        
+        // Add an empty line to separate nodes
+        outputAdj.println("");
+        exportedNodes++;
+      }
+    }
+  }
+  
+  // File 2: Generate Map File (map.txt)
+  
+  int obstacleCount = 0;
+  int tileCount = 0;
+
+  // 1. Export OBSTACLES
   for (int j = 0; j < rows; j++) {
     for (int i = 0; i < cols; i++) {
       if (grid[i][j] == OBSTACLE) {
-        // Format: x y
-        output.println(i + " " + j);
-        filledCount++;
+        outputMap.println(i + " " + j);
+        obstacleCount++;
       }
     }
   }
   
-  output.flush(); // Write remaining data
-  output.close(); // Finish file
+  // Separator (Empty Line)
+  outputMap.println("");
   
-  println("Exported " + borderedCount + " bordered and " + filledCount + " filled squares to tiles.txt");
-  surface.setTitle("Saved to 'map.txt' successfully");
+  // 2. Export TILES
+  for (int j = 0; j < rows; j++) {
+    for (int i = 0; i < cols; i++) {
+      if (grid[i][j] == TILE) {
+        outputMap.println(i + " " + j);
+        tileCount++;
+      }
+    }
+  }
+
+  outputAdj.flush(); 
+  outputAdj.close(); 
+  
+  outputMap.flush();
+  outputMap.close();
+  
+  println("Exported Adjacency List (" + exportedNodes + " nodes) to " + adjFilename);
+  println("Exported Coordinates (" + tileCount + " tiles, " + obstacleCount + " obstacles) to " + mapFilename);
+  
+  surface.setTitle("Saved '" + adjFilename + "' and '" + mapFilename + "'");
 }
