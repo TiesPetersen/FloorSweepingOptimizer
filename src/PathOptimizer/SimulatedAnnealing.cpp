@@ -18,7 +18,7 @@ double SimulatedAnnealing::acceptanceProbability(double distanceDifference,
   return exp(-distanceDifference / temperature);
 }
 
-int SimulatedAnnealing::calculatePathDistance(const vector<int> &path) {
+int SimulatedAnnealing::calculateCost(const vector<int> &path) {
   int totalDistance = 0;
   for (size_t i = 0; i < path.size() - 1; ++i) {
     int from = path[i];
@@ -31,13 +31,6 @@ int SimulatedAnnealing::calculatePathDistance(const vector<int> &path) {
   return totalDistance;
 }
 
-int SimulatedAnnealing::calculateAnglePenalty(const vector<int> &path) {
-  // Placeholder for angle penalty calculation
-  // In a real implementation, this would compute penalties based on angles
-  // between nodes in the path.
-  return 0;
-}
-
 SimulatedAnnealing::SimulatedAnnealing(const Graph &graph,
                                        double initialTemperature,
                                        double finalTemperature,
@@ -46,9 +39,9 @@ SimulatedAnnealing::SimulatedAnnealing(const Graph &graph,
       finalTemperature(finalTemperature), iterations(iterations) {
   pathSize = graph.n;
   currentPath = calculateRandomPath();
-  currentDistance = calculatePathDistance(currentPath);
+  currentCost = calculateCost(currentPath);
   bestPath = currentPath;
-  bestDistance = currentDistance;
+  bestCost = currentCost;
 }
 
 void SimulatedAnnealing::optimize() {
@@ -57,73 +50,57 @@ void SimulatedAnnealing::optimize() {
   double coolingRate =
       pow(finalTemperature / initialTemperature, 1.0 / iterations);
 
-  // Initialize random generator setup
-  // Doing rand() % n is okay for simple use cases, but strict uniformity
-  // isn't critical for SA as long as it covers the space.
-
   for (long long iter = 0; iter < iterations; ++iter) {
     // Logging progress every 5% of iterations
     if (iter % (iterations / 20) == 0) {
       printf("Iteration %lld/%lld (%.0f%%), Temp: %.2f, Curr: %d, Best: "
              "%d\n",
              iter, iterations, (100.0 * iter) / iterations, temperature,
-             currentDistance, bestDistance);
+             currentCost, bestCost);
     }
 
     // Generate two distinct indices for swapping
     size_t i = rand() % pathSize;
     size_t j = rand() % pathSize;
-
     while (i == j) {
       j = rand() % pathSize;
     }
-
     if (i > j) {
       swap(i, j);
     }
-
     if (i == 0 && j == pathSize - 1) {
       // Swapping the entire path is pointless
       continue;
     }
 
-    // Calculate the change in distance if we swap the segment between i and j
-    size_t idx_pre_i = (i == 0) ? pathSize - 1 : i - 1;
-    size_t idx_post_j = (j == pathSize - 1) ? 0 : j + 1;
+    // Perform the 2-opt swap by reversing the segment between i and j
+    reverse(currentPath.begin() + i, currentPath.begin() + j + 1);
 
-    int node_a = currentPath[idx_pre_i];
-    int node_b = currentPath[i];
-    int node_c = currentPath[j];
-    int node_d = currentPath[idx_post_j];
+    // Calculate the new distance after the swap
+    int newCost = calculateCost(currentPath);
 
-    // Current distances
-    int dist_ab = graph.distanceTable[node_a][node_b];
-    int dist_cd = graph.distanceTable[node_c][node_d];
-
-    // New distances after swap
-    int dist_ac = graph.distanceTable[node_a][node_c];
-    int dist_bd = graph.distanceTable[node_b][node_d];
-
-    // Calculate distance difference
-    int addedCost = dist_ac + dist_bd;
-    int removedCost = dist_ab + dist_cd;
-    int distanceDifference = addedCost - removedCost;
+    // Calculate the distance difference
+    int costDifference = newCost - currentCost;
 
     // Decide whether to accept the new path
-    if (acceptanceProbability(distanceDifference, temperature) >
+    if (acceptanceProbability(costDifference, temperature) >
         ((double)rand() / RAND_MAX)) {
 
-      // Perform the swap (Reverse the segment)
-      reverse(currentPath.begin() + i, currentPath.begin() + j + 1);
+      // Accept the new path (Reverse the segment)
+      // The segment was already reversed above, so no need to reverse again
+      // here.
 
-      // Update distance
-      currentDistance += distanceDifference;
+      // Update cost
+      currentCost = newCost;
 
       // Update best path
-      if (currentDistance < bestDistance) {
+      if (currentCost < bestCost) {
         bestPath = currentPath;
-        bestDistance = currentDistance;
+        bestCost = currentCost;
       }
+    } else {
+      // Revert the swap (reverse the segment back)
+      reverse(currentPath.begin() + i, currentPath.begin() + j + 1);
     }
 
     temperature *= coolingRate;
@@ -149,9 +126,9 @@ void SimulatedAnnealing::saveOptimizedPath(const string filePath,
     string newFilePath;
     if (dotPos != string::npos) {
       newFilePath = filePath.substr(0, dotPos) + "_cost_" +
-                    to_string(bestDistance) + filePath.substr(dotPos);
+                    to_string(bestCost) + filePath.substr(dotPos);
     } else {
-      newFilePath = filePath + "_cost_" + to_string(bestDistance);
+      newFilePath = filePath + "_cost_" + to_string(bestCost);
     }
     return saveOptimizedPath(newFilePath, false);
   }
