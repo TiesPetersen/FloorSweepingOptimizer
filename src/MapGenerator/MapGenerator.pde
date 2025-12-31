@@ -6,8 +6,8 @@
  * - O: Open a map txt file
  */
 
-int cols = 44;
-int rows = 28;
+int cols = 46;
+int rows = 30;
 int cellSize = 25; // Size of each square in pixels
 int[][] grid;
 
@@ -58,8 +58,8 @@ void draw() {
         rect(x, y, cellSize, cellSize);
       } 
       else if (state == TILE) {
-        fill(255);
-        stroke(0);
+        fill(220);
+        stroke(200);
         strokeWeight(1);
         rect(x + 1, y + 1, cellSize - 2, cellSize - 2);
       }
