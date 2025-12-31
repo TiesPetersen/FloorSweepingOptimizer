@@ -1,5 +1,5 @@
 /**
- * Path Visualizer (Animated)
+ * Path Visualizer (Dark Mode - Merged Obstacles)
  * 1. Loads Map -> Reconstructs Nodes.
  * 2. Loads Path -> Calculates Density.
  * 3. Animates the path step-by-step.
@@ -7,11 +7,13 @@
 
 import java.util.*; 
 
-int cols = 44;
-int rows = 28;
+// --- CONFIGURATION ---
+int cols = 46;
+int rows = 30;
 int cellSize = 25; 
-int[][] grid;
 
+// Data Structures
+int[][] grid;
 ArrayList<PVector> nodePositions; 
 ArrayList<Integer> pathIDs;
 
@@ -22,67 +24,129 @@ int speedDelay = 1;        // Higher = Slower. 1 = Fast, 10 = Slow.
 // Holds the highest traffic count on any single edge
 int maxOverlaps = 1;
 
+// Constants
 final int EMPTY = 0;
 final int OBSTACLE = 1;
 final int TILE = 2;
 
+// State flags for loading text
+boolean mapLoaded = false;
+boolean pathLoaded = false;
+
 void setup() {
+  // Initial size matching your original ratio
   size(1101, 701);
   
+  // Resize logic to fit grid exactly
   int windowWidth = cols * cellSize;
   int windowHeight = rows * cellSize;
   windowResize(windowWidth, windowHeight);
   
+  // Initialize grid and lists
   grid = new int[cols][rows];
   nodePositions = new ArrayList<PVector>();
   pathIDs = new ArrayList<Integer>();
 
+  // Initialize grid to empty
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      grid[i][j] = EMPTY;
+    }
+  }
+
   textAlign(CENTER, CENTER);
   textSize(16);
+  surface.setTitle("Path Visualizer - Waiting for Input...");
   
   selectInput("Select the map txt file (map.txt):", "mapFileSelected");
 }
 
 void draw() {
-  background(240);
+  background(0); // Completely black background
   
-  // 1. Draw Grid
-  strokeWeight(1);
-  stroke(200);
+  // 1. Draw Grid Dots (Dark Grey on corners)
+  stroke(48);
+  strokeWeight(2);
+  for (int i = 1; i <= cols; i++) {
+    for (int j = 1; j <= rows; j++) {
+      point(i * cellSize, j * cellSize);
+    }
+  }
+  
+  // 2. Draw Tiles
   for (int i = 0; i < cols; i++) {
     for (int j = 0; j < rows; j++) {
       int x = i * cellSize;
       int y = j * cellSize;
-      if (grid[i][j] == OBSTACLE) {
+      
+      if (grid[i][j] == TILE) {
+        // Tile: Dark fill with grey border
         fill(0);
+        stroke(96);
+        strokeWeight(1);
         rect(x, y, cellSize, cellSize);
-      } else if (grid[i][j] == TILE) {
-        fill(255);
-        rect(x, y, cellSize, cellSize);
-      } else {
-        fill(240);
-        rect(x, y, cellSize, cellSize);
+      } 
+    }
+  }
+  
+  // 3. Draw Obstacles (With Merged Borders)
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      int x = i * cellSize;
+      int y = j * cellSize;
+      
+      if (grid[i][j] == OBSTACLE) {
+        // B. Draw White Borders ONLY if neighbor is NOT an obstacle
+        stroke(255);
+        strokeWeight(1);
+        
+        // Check Top
+        if (j == 0 || grid[i][j-1] != OBSTACLE) {
+          line(x, y, x + cellSize, y);
+        }
+        
+        // Check Bottom
+        if (j == rows - 1 || grid[i][j+1] != OBSTACLE) {
+          line(x, y + cellSize, x + cellSize, y + cellSize);
+        }
+        
+        // Check Left
+        if (i == 0 || grid[i-1][j] != OBSTACLE) {
+          line(x, y, x, y + cellSize);
+        }
+        
+        // Check Right
+        if (i == cols - 1 || grid[i+1][j] != OBSTACLE) {
+          line(x + cellSize, y, x + cellSize, y + cellSize);
+        }
       }
     }
   }
   
-  // 2. Draw Path (Animated)
-  if (pathIDs.size() > 1 && nodePositions.size() > 0) {
+  // 4. Draw Graph Nodes (Background white dots for valid tiles)
+  if (mapLoaded) {
+    noStroke();
+    fill(255); // White dots
+    for (PVector pos : nodePositions) {
+      ellipse(pos.x, pos.y, 7, 7); // Using center position
+    }
+  }
+
+  // 5. Draw Path (Animated)
+  if (pathLoaded && pathIDs.size() > 1 && nodePositions.size() > 0) {
     
     // --- ANIMATION UPDATE LOGIC ---
-    // Only update every 'speedDelay' frames
     if (frameCount % speedDelay == 0) {
       if (pathProgress < pathIDs.size() - 1) {
         pathProgress++;
       }
     }
     
-    // Calculate Alpha based on MAX density found in the whole file
-    //float pathAlpha = 255.0 / (float)maxOverlaps;
+    // Calculate Alpha
     float pathAlpha = 255.0;
-    if (pathAlpha < 20) pathAlpha = 20; // Minimum visibility
+    // if (pathAlpha < 20) pathAlpha = 20; // Unused in target currently but kept logic
 
-    stroke(255, 0, 0, pathAlpha); 
+    stroke(0, 209, 192, pathAlpha); 
     strokeWeight(2);
     noFill();
     
@@ -94,20 +158,19 @@ void draw() {
       if (isValidID(idCurrent) && isValidID(idNext)) {
         PVector p1 = nodePositions.get(idCurrent);
         PVector p2 = nodePositions.get(idNext);
-        drawArrow(p1.x + cellSize/2, p1.y + cellSize/2, p2.x + cellSize/2, p2.y + cellSize/2);
+        // Note: p1 and p2 are already centered in this version
+        drawArrow(p1.x, p1.y, p2.x, p2.y);
       }
     }
-    
-    // Draw Start Point (Green)
-    drawEndPoint(pathIDs.get(0), color(0, 255, 0)); 
-    
-    // Draw "Head" of the path (Current Position) - Yellow
-    if (pathProgress < pathIDs.size() - 1) {
-       drawEndPoint(pathIDs.get(pathProgress), color(255, 200, 0)); 
-    } else {
-       // Only draw Blue End point when animation finishes
-       drawEndPoint(pathIDs.get(pathIDs.size()-1), color(0, 0, 255)); 
-    }
+  }
+  
+  // 6. Loading Text Feedback
+  if (!mapLoaded) {
+    fill(255);
+    text("Please select map.txt...", width/2, height/2);
+  } else if (!pathLoaded) {
+    fill(255);
+    text("Map Loaded. Please select path.txt...", width/2, height/2);
   }
 }
 
@@ -132,26 +195,37 @@ void drawEndPoint(int nodeID, int c) {
     PVector pos = nodePositions.get(nodeID);
     fill(c);
     noStroke();
-    ellipse(pos.x + cellSize/2, pos.y + cellSize/2, 10, 10);
+    // pos is already centered
+    ellipse(pos.x, pos.y, 10, 10);
   }
 }
 
 // --- FILE LOADING ---
 
 void mapFileSelected(File selection) {
-  if (selection == null) return;
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+    return;
+  }
   loadMapFromFile(selection);
   reconstructNodeMapping();
+  mapLoaded = true;
+  surface.setTitle("Map Loaded. Select Path...");
   selectInput("Select the path txt file (path.txt):", "pathFileSelected");
 }
 
 void pathFileSelected(File selection) {
-  if (selection == null) return;
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+    return;
+  }
   loadPathFromFile(selection);
   calculateMaxOverlaps();
   
+  pathLoaded = true;
   // RESET ANIMATION
   pathProgress = 0;
+  surface.setTitle("Playing Path: " + pathIDs.size() + " steps");
 }
 
 void calculateMaxOverlaps() {
@@ -178,9 +252,12 @@ void calculateMaxOverlaps() {
 void loadMapFromFile(File file) {
   String[] lines = loadStrings(file.getAbsolutePath());
   if (lines == null) return;
+  
+  // Clear grid
   for (int i = 0; i < cols; i++) {
     for (int j = 0; j < rows; j++) grid[i][j] = EMPTY;
   }
+  
   int currentImportState = OBSTACLE;
   for (String line : lines) {
     line = trim(line);
@@ -192,10 +269,11 @@ void loadMapFromFile(File file) {
     if (parts.length >= 2) {
       int x = int(parts[0]);
       int y = int(parts[1]);
-      if (x >= 0 && x < cols && y >= 0 && y < rows) grid[x][y] = currentImportState;
+      if (x >= 0 && x < cols && y >= 0 && y < rows) {
+        grid[x][y] = currentImportState;
+      }
     }
   }
-  surface.setTitle("Map Loaded.");
 }
 
 void reconstructNodeMapping() {
@@ -203,7 +281,10 @@ void reconstructNodeMapping() {
   for (int j = 0; j < rows; j++) {
     for (int i = 0; i < cols; i++) {
       if (grid[i][j] == TILE) {
-        nodePositions.add(new PVector(i * cellSize, j * cellSize));
+        // Store the CENTER of the cell to match the visual style
+        float centerX = i * cellSize + cellSize/2.0;
+        float centerY = j * cellSize + cellSize/2.0;
+        nodePositions.add(new PVector(centerX, centerY));
       }
     }
   }
@@ -219,5 +300,4 @@ void loadPathFromFile(File file) {
       try { pathIDs.add(int(line)); } catch (Exception e) {}
     }
   }
-  surface.setTitle("Playing Path: " + pathIDs.size() + " steps");
 }
