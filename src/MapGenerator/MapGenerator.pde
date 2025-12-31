@@ -1,10 +1,12 @@
 /**
- * Map Generator
+ * Map Generator (Dark Mode Style)
  * * INTERACTION:
  * - Mouse Click: Toggle cell state (Empty -> Tile -> Obstacle -> Empty)
  * - Spacebar: Export adjacency list to "map.txt" file
  * - O: Open a map txt file
  */
+
+import java.util.*;
 
 int cols = 46;
 int rows = 30;
@@ -20,52 +22,93 @@ final int OBSTACLE = 1;
 final int TILE = 2;
 
 void setup() {
-  size(1101, 701); 
+  // --- RESIZE LOGIC (Matches Source Style) ---
+  size(100, 100); // Initial placeholder size
   
-  // Calculate window size based on grid dimensions
   int windowWidth = cols * cellSize;
   int windowHeight = rows * cellSize;
   windowResize(windowWidth, windowHeight);
+  
   grid = new int[cols][rows];
   
   // Set initial text align for UI feedback
   textAlign(CENTER, CENTER);
   textSize(16);
-  surface.setTitle("Map Generator - Click or Drag to generate a map - Press SPACE to save - Press O to open a map txt file");
+  surface.setTitle("Map Generator - Click/Drag to paint - SPACE to save - O to open");
 }
 
 void draw() {
-  background(240);
-  strokeCap(SQUARE);
+  background(0); // Completely black background
   
+  // 1. Draw Grid Dots (Dark Grey on corners)
+  stroke(48);
+  strokeWeight(2);
+  for (int i = 1; i <= cols; i++) {
+    for (int j = 1; j <= rows; j++) {
+      point(i * cellSize, j * cellSize);
+    }
+  }
+  
+  // 2. Draw Tiles
   for (int i = 0; i < cols; i++) {
     for (int j = 0; j < rows; j++) {
       int x = i * cellSize;
       int y = j * cellSize;
-      
       int state = grid[i][j];
       
-      if (state == EMPTY) {
-        fill(255);
-        stroke(224);
-        strokeWeight(1);
-        rect(x, y, cellSize, cellSize);
-      } 
-      else if (state == OBSTACLE) {
+      if (state == TILE) {
         fill(0);
-        stroke(224);
+        stroke(96);
         strokeWeight(1);
         rect(x, y, cellSize, cellSize);
+        
+        noStroke();
+        fill(96);
+        ellipse(x + cellSize/2, y + cellSize/2, 2, 2);
       } 
-      else if (state == TILE) {
-        fill(220);
-        stroke(200);
-        strokeWeight(1);
-        rect(x + 1, y + 1, cellSize - 2, cellSize - 2);
-      }
     }
   }
+  
+  // 3. Draw Obstacles
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      int x = i * cellSize;
+      int y = j * cellSize;
+      int state = grid[i][j];
+      
+      if (state == OBSTACLE) {
+        stroke(255);
+        strokeWeight(1);
+        
+        // Check Top
+        if (j == 0 || grid[i][j-1] != OBSTACLE) {
+          line(x, y, x + cellSize, y);
+        }
+        
+        // Check Bottom
+        if (j == rows - 1 || grid[i][j+1] != OBSTACLE) {
+          line(x, y + cellSize, x + cellSize, y + cellSize);
+        }
+        
+        // Check Left
+        if (i == 0 || grid[i-1][j] != OBSTACLE) {
+          line(x, y, x, y + cellSize);
+        }
+        
+        // Check Right
+        if (i == cols - 1 || grid[i+1][j] != OBSTACLE) {
+          line(x + cellSize, y, x + cellSize, y + cellSize);
+        }
+      }
+      
+    }
+  }
+  
+  // Note: EMPTY cells are left as background (black) with just the grid dots
+
 }
+
+// --- INTERACTION LOGIC (UNCHANGED) ---
 
 void mousePressed() {
   // specific logic to ensure we click inside the grid
