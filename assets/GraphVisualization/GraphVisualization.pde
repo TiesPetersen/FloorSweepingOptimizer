@@ -283,7 +283,7 @@ void keyPressed() {
   if (key == 'd') {
     drawMode = (drawMode + 1) % 5;
     println("Changing drawing mode");
-  } else if (key == ' ') {
+  } else if (key == 'q') {
     save("vis_" + drawMode + ".png");
     println("Saved image");
   }

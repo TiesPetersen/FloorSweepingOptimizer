@@ -7,11 +7,11 @@ using namespace std;
 
 int main() {
   cout << "Loading graph..." << endl;
-  Graph graph("adjacency_list.txt");
+  Graph graph("AH_B_adjacency_list.txt");
 
   // Load map coordinates for angle calculation
   cout << "Loading map coordinates..." << endl;
-  graph.loadMap("map.txt");
+  graph.loadMap("AH_B_map.txt");
 
   cout << "Initializing simulated annealing..." << endl;
   // Parameters: Graph, InitTemp, EndTemp, Iterations, AngleWeight

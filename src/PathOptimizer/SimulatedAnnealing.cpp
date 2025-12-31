@@ -102,6 +102,8 @@ void SimulatedAnnealing::optimize() {
              "%.2f\n",
              iter, iterations, (100.0 * iter) / iterations, temperature,
              currentCost, bestCost);
+      int count = iter / (iterations / 20);
+      saveOptimizedPath("path_inter_" + to_string(count) + ".txt");
     }
 
     // Generate two distinct indices for swapping

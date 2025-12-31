@@ -20,6 +20,7 @@ ArrayList<Integer> pathIDs;
 // --- ANIMATION VARIABLES ---
 int pathProgress = 0;      // How many steps have we drawn so far?
 int speedDelay = 1;        // Higher = Slower. 1 = Fast, 10 = Slow.
+int pathProgressPerCycle = 100;
 
 // Holds the highest traffic count on any single edge
 int maxOverlaps = 1;
@@ -33,9 +34,12 @@ final int TILE = 2;
 boolean mapLoaded = false;
 boolean pathLoaded = false;
 
+boolean pathTransparaceny = false;
+
 void setup() {
   // Initial size matching your original ratio
   size(1101, 701);
+  frameRate(60);
   
   // Resize logic to fit grid exactly
   int windowWidth = cols * cellSize;
@@ -138,13 +142,21 @@ void draw() {
     // --- ANIMATION UPDATE LOGIC ---
     if (frameCount % speedDelay == 0) {
       if (pathProgress < pathIDs.size() - 1) {
-        pathProgress++;
+        pathProgress += pathProgressPerCycle;
+        if (pathProgress >= pathIDs.size()) {
+          pathProgress = pathIDs.size() - 1;
+        }
       }
     }
     
     // Calculate Alpha
-    float pathAlpha = 255.0;
-    // if (pathAlpha < 20) pathAlpha = 20; // Unused in target currently but kept logic
+    float pathAlpha;
+    if (pathTransparaceny) {
+      pathAlpha = 255 / sqrt(maxOverlaps);
+      if (pathAlpha < 20) pathAlpha = 20;
+    } else {
+      pathAlpha = 255;
+    }
 
     stroke(0, 209, 192, pathAlpha); 
     strokeWeight(2);
@@ -299,5 +311,15 @@ void loadPathFromFile(File file) {
     if (line.length() > 0) {
       try { pathIDs.add(int(line)); } catch (Exception e) {}
     }
+  }
+}
+
+void keyPressed() {
+  if (key == 't'){
+    pathTransparaceny = !pathTransparaceny;
+    println("changing trans");
+  } else if (key == 'q') {
+    save("path_visualization.png");
+    println("saving image");
   }
 }
