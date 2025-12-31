@@ -1,5 +1,5 @@
 /**
- * Graph Visualizer (Dark Mode)
+ * Graph Visualizer (Dark Mode - Merged Obstacles)
  * 1. Loads "map.txt" to determine node positions (Tiles).
  * 2. Loads "adjacency_list.txt" to draw the graph edges.
  * 3. Overlays the graph on the map.
@@ -8,8 +8,8 @@
 import java.util.*; 
 
 // --- CONFIGURATION ---
-int cols = 46; // Updated to 46
-int rows = 30; // Updated to 30
+int cols = 46; 
+int rows = 30; 
 int cellSize = 25; 
 
 // Data Structures
@@ -21,10 +21,10 @@ ArrayList<Edge> edges;            // List of all connections to draw
 boolean mapLoaded = false;
 boolean graphLoaded = false;
 int drawMode = 0;
-// 0 -> obstacles + tiles
-// 1 -> tiles
-// 2 -> tiles + dots
-// 3 -> tiles + dots + edges
+// 0 -> obstacles
+// 1 -> obstacles + tiles
+// 2 -> obstacles + tiles + dots
+// 3 -> obstacles + dots + edges
 // 4 -> dots + edges
 
 // Constants
@@ -48,7 +48,7 @@ void setup() {
   // Initial size, will be resized immediately below
   size(100, 100);
   
-  // --- RESIZE LOGIC ADDED HERE ---
+  // --- RESIZE LOGIC ---
   int windowWidth = cols * cellSize;
   int windowHeight = rows * cellSize;
   windowResize(windowWidth, windowHeight);
@@ -77,7 +77,7 @@ void draw() {
   background(0); // Completely black background
   
   // 1. Draw Grid Dots (Dark Grey on corners)
-  stroke(48); // Dark grey
+  stroke(48);
   strokeWeight(2);
   for (int i = 1; i <= cols; i++) {
     for (int j = 1; j <= rows; j++) {
@@ -91,7 +91,7 @@ void draw() {
       int x = i * cellSize;
       int y = j * cellSize;
       
-      if (grid[i][j] == TILE && (drawMode == 0 || drawMode == 1 || drawMode == 2 || drawMode == 3)) {
+      if (grid[i][j] == TILE && (drawMode == 1 || drawMode == 2)) {
         // Tile:
         fill(0);
         stroke(96);
@@ -101,28 +101,45 @@ void draw() {
     }
   }
   
-  // 2. Draw Obstacles
+  // 3. Draw Obstacles (With Merged Borders)
   for (int i = 0; i < cols; i++) {
     for (int j = 0; j < rows; j++) {
       int x = i * cellSize;
       int y = j * cellSize;
       
-      if (grid[i][j] == OBSTACLE && (drawMode == 0)) {
-        // Obstacle:
-        fill(0); 
+      if (grid[i][j] == OBSTACLE && (drawMode != 4)) {
+        // B. Draw White Borders ONLY if neighbor is NOT an obstacle
         stroke(255);
         strokeWeight(1);
-        rect(x, y, cellSize, cellSize);
         
+        // Check Top
+        if (j == 0 || grid[i][j-1] != OBSTACLE) {
+          line(x, y, x + cellSize, y);
+        }
+        
+        // Check Bottom
+        if (j == rows - 1 || grid[i][j+1] != OBSTACLE) {
+          line(x, y + cellSize, x + cellSize, y + cellSize);
+        }
+        
+        // Check Left
+        if (i == 0 || grid[i-1][j] != OBSTACLE) {
+          line(x, y, x, y + cellSize);
+        }
+        
+        // Check Right
+        if (i == cols - 1 || grid[i+1][j] != OBSTACLE) {
+          line(x + cellSize, y, x + cellSize, y + cellSize);
+        }
       }
     }
   }
   
   // Empty cells are left as background (black) with just the grid dots
 
-  // 3. Draw Graph Edges
+  // 4. Draw Graph Edges
   if (graphLoaded && mapLoaded && (drawMode == 3 || drawMode == 4)) {
-    stroke(255, 100);
+    stroke(255, 70);
     strokeWeight(1);
     noFill();
     
@@ -135,17 +152,17 @@ void draw() {
     }
   }
   
-  // 4. Draw Graph Nodes
-  if (mapLoaded && (drawMode == 2 || drawMode == 3 || drawMode == 4)) {
+  // 5. Draw Graph Nodes
+  if (mapLoaded && (drawMode == 2 ||drawMode == 3 || drawMode == 4)) {
     noStroke();
-    fill(255); // Bright Blue dots
+    fill(255); // White dots
     
     for (PVector pos : nodePositions) {
       ellipse(pos.x, pos.y, 7, 7);
     }
   }
   
-  // 5. Loading Text Feedback
+  // 6. Loading Text Feedback
   if (!mapLoaded) {
     fill(255);
     text("Please select map.txt...", width/2, height/2);
@@ -265,7 +282,9 @@ void loadAdjacencyData(File file) {
 void keyPressed() {
   if (key == 'd') {
     drawMode = (drawMode + 1) % 5;
+    println("Changing drawing mode");
   } else if (key == ' ') {
     save("vis_" + drawMode + ".png");
+    println("Saved image");
   }
 }
