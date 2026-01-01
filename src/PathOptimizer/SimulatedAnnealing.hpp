@@ -35,4 +35,6 @@ public:
   vector<int> calculateRandomPath();
 
   void saveOptimizedPath(const string filePath, bool appendBestCost = false);
+
+  double getBestCost() const;
 };

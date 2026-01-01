@@ -20,7 +20,7 @@ ArrayList<Integer> pathIDs;
 // --- ANIMATION VARIABLES ---
 int pathProgress = 0;      // How many steps have we drawn so far?
 int speedDelay = 1;        // Higher = Slower. 1 = Fast, 10 = Slow.
-int pathProgressPerCycle = 100;
+int pathProgressPerCycle = 1;
 
 // Holds the highest traffic count on any single edge
 int maxOverlaps = 1;
@@ -35,6 +35,8 @@ boolean mapLoaded = false;
 boolean pathLoaded = false;
 
 boolean pathTransparaceny = false;
+
+boolean saveEachFrame = false;
 
 void setup() {
   // Initial size matching your original ratio
@@ -146,7 +148,7 @@ void draw() {
         if (pathProgress >= pathIDs.size()) {
           pathProgress = pathIDs.size() - 1;
         }
-      }
+      }      
     }
     
     // Calculate Alpha
@@ -183,6 +185,10 @@ void draw() {
   } else if (!pathLoaded) {
     fill(255);
     text("Map Loaded. Please select path.txt...", width/2, height/2);
+  }
+  
+  if (pathLoaded && saveEachFrame) {
+    save(String.format("path_frame_%04d.png", frameCount));
   }
 }
 
