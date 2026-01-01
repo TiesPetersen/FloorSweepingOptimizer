@@ -1,9 +1,13 @@
 # FloorSweepingOptimizer
 A C++ optimizer that generates efficient floor sweeping routes on grid maps with obstacles using simulated annealing.
 
-blah blah blah, about tiles and grid maps and simulated annealing approach, 2opt, blah blah
+Blog post with more details, visualizations, gifs and the way this relates to AI and your well-being (5 min read): 
 
-[ insert photos / gif ]
+![Optimized path](/assets/PathB/PathB_optimized.gif)
+*An example of one of the optimized paths.*
+
+![Simulated annealing at work](/assets/SimulatedAnnealingAtWorkGIF/SimulatedAnnealingAtWorkGIF_optimized.gif)
+*Simulated annealing slowly optimizing the path over many iterations.*
 
 ## Project Overview
 

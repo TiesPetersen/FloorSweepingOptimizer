@@ -16,7 +16,7 @@ int main() {
   cout << "Initializing simulated annealing..." << endl;
   // Parameters: Graph, InitTemp, EndTemp, Iterations, AngleWeight
   // AngleWeight = 20.0 (Adjust this to prioritize straighter paths)
-  SimulatedAnnealing sa(graph, 300.0, 0.5, 10000000, 10.0);
+  SimulatedAnnealing sa(graph, 300.0, 0.5, 10000000, 2.0);
 
   cout << "Starting optimization..." << endl;
   sa.optimize();
