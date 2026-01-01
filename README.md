@@ -1,5 +1,5 @@
 # FloorSweepingOptimizer
-An optimizer that generates efficient floor sweeping routes on grid maps with obstacles using simulated annealing.
+A C++ optimizer that generates efficient floor sweeping routes on grid maps with obstacles using simulated annealing.
 
 blah blah blah, about tiles and grid maps and simulated annealing approach, 2opt, blah blah
 

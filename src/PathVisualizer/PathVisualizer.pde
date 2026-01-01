@@ -20,7 +20,7 @@ ArrayList<Integer> pathIDs;
 // --- ANIMATION VARIABLES ---
 int pathProgress = 0;      // How many steps have we drawn so far?
 int speedDelay = 1;        // Higher = Slower. 1 = Fast, 10 = Slow.
-int pathProgressPerCycle = 1;
+int pathProgressPerCycle = 10;
 
 // Holds the highest traffic count on any single edge
 int maxOverlaps = 1;
