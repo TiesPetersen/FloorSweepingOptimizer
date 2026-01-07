@@ -2,7 +2,7 @@
 
 A C++ optimizer that generates efficient floor sweeping routes on grid maps with obstacles using simulated annealing.
 
-Blog post with more details, visualizations, and well-being connections: [Link to Blog Post]
+Blog post with more details, visualizations, and well-being connections: [Link to Blog Post](https://open.substack.com/pub/tiespetersen/p/i-got-paid-minimum-wage-to-solve?r=58fv3v&utm_campaign=post&utm_medium=web&showWelcomeOnShare=true)
 
 ![Optimized path](/assets/PathB/PathB_optimized.gif)
 *An example of one of the optimized paths.*
